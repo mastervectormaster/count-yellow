@@ -2,7 +2,7 @@ import cv2
 import glob
 import os
 
-lst_videos = glob.glob("auto labels/*.mp4")
+lst_videos = glob.glob("videos/*.mp4")
 
 i = 0
 save_idx = 0
@@ -14,7 +14,7 @@ for v in lst_videos:
     while True:
         ret, frame = vid.read()
         if ret:
-            if i == 35:
+            if i == 10:
                 save_path = "label_img/{}_{}.jpg".format(basename, save_idx)
                 print("     Save ", save_path)
                 cv2.imwrite(save_path, frame)
