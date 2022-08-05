@@ -8,11 +8,19 @@ from matplotlib.pyplot import box
 import torch
 import cv2
 
+X_THRESH = 100
+RIGHT_SEQ = [[3, 0], [4, 1], [5, 2], [8, 6], [9, 7]]
+LEFT_SEQ = [[3, 0], [4, 1], [5, 2], [8, 6], [9, 7]]
+
+
+def get_ymin(box):
+    return box['ymin']
+
 class GlueDetect:
     """
         Glue Detection Class based on Yolov5
     """
-    def __init__(self, model_path='glue-yolov5.pt'):
+    def __init__(self, model_path='models/glue-yolov5.pt'):
         if not exists(model_path):
             print("Can not find the model.")
             return None
@@ -20,32 +28,8 @@ class GlueDetect:
         self.initialized = True
         print("Model initialized.")
     
-    def detect(self, image_path, need_draw=False):
-        """
-            Detect Glue (yellow) from specified image.
-            @param image_path: image containing (or not) glue.
-            @return box: box coordinates (xmin, ymin, xmax, ymax) if detected, None otherwise
-        """
-
-        if not self.initialized:
-            print("Model is not initialized.")
-            return None
-        if not exists(image_path):
-            print("Can not find the image.")
-            return None
-        
-        detect_results = self.model(image_path)
-        sorted_by_confidence_results = detect_results.pandas().xyxy[0].sort_values(by=['confidence'], ascending=False)
-        if len(sorted_by_confidence_results) == 0:
-            # print("No QR Code detected")
-            return None
-        most_confident_box = sorted_by_confidence_results.iloc[0]
-        if need_draw:
-            image = cv2.imread(image_path)
-            self.draw_box(image, most_confident_box)
-        return most_confident_box
-    
     def detect_from_cv_mat(self, cv_mat, threshold, need_draw=False):
+
         """
             Detect Glue (yellow) from specified image.
             @param cv_mat: image containing (or not) glue.
@@ -75,7 +59,78 @@ class GlueDetect:
             self.draw_box(cv_mat, boxes)
         return boxes
 
-    def draw_box(self, image, boxes):
+    def x_split(self, bbox_centers):
+        result = {}
+        seed_left = -1
+        seed_right = -1
+
+        length = len(bbox_centers)
+        for i in range(length):
+            if bbox_centers[0][0] - bbox_centers[i][0] > X_THRESH:
+                seed_left = i
+                seed_right = 0
+                break
+            elif bbox_centers[i][0] - bbox_centers[0][0] > X_THRESH:
+                seed_right = i
+                seed_left = 0
+                break
+
+        for i in range(length):
+            if abs(bbox_centers[i][0] - bbox_centers[seed_left][0]) <= abs(bbox_centers[i][0] - bbox_centers[seed_right][0]):
+                result[i] = 0
+            else:
+                result[i] = 1
+
+        return result, bbox_centers[seed_right][0] - bbox_centers[seed_left][0]
+
+    def count(self, bboxes, orientation):
+        count = [0] * 10
+        if orientation == 'right':
+            bboxes.sort(key=get_ymin, reverse=True)
+            bbox_centers = list(map(lambda box: (int((box['xmin'] + box['xmax']) / 2), int((box['ymin'] + box['ymax']) / 2)), bboxes))
+            row = 0
+            left_or_right, x_thresh = self.x_split(bbox_centers)
+            length = len(bbox_centers)
+            i = 0
+            y_thresh = x_thresh / 4
+            if x_thresh > 450:
+                y_thresh = x_thresh / 5
+            while i < length - 1:
+                if bbox_centers[i][1] - bbox_centers[i + 1][1] <= y_thresh:
+                    count[RIGHT_SEQ[row][0]] = 1
+                    count[RIGHT_SEQ[row][1]] = 1
+                    i += 2
+                else:
+                    count[RIGHT_SEQ[row][left_or_right[i]]] = 1
+                    i += 1
+                row += 1
+            if bbox_centers[length - 2][1] - bbox_centers[length - 1][1] > y_thresh:
+                count[RIGHT_SEQ[row][left_or_right[length - 1]]] = 1
+        else:
+            bboxes.sort(key=get_ymin)
+            bbox_centers = list(map(lambda box: (int((box['xmin'] + box['xmax']) / 2), int((box['ymin'] + box['ymax']) / 2)), bboxes))
+            row = 0
+            left_or_right, x_thresh = self.x_split(bbox_centers)
+            length = len(bbox_centers)
+            i = 0
+            y_thresh = x_thresh / 4
+            if x_thresh > 450:
+                y_thresh = x_thresh / 5
+            while i < length - 1:
+                if bbox_centers[i + 1][1] - bbox_centers[i][1] <= y_thresh:
+                    count[LEFT_SEQ[row][0]] = 1
+                    count[LEFT_SEQ[row][1]] = 1
+                    i += 2
+                else:
+                    count[LEFT_SEQ[row][left_or_right[i]]] = 1
+                    i += 1
+                row += 1
+            if bbox_centers[length - 1][1] - bbox_centers[length - 2][1] > y_thresh:
+                count[LEFT_SEQ[row][left_or_right[length - 1]]] = 1
+        return count
+
+
+    def draw_boxes(self, image, boxes):
         """
             Draw bounding box on the image.
             @param image_path: image containing (or not) QR Code.
@@ -86,7 +141,7 @@ class GlueDetect:
             print("No box provided")
             return
         
-        for box in boxes:
+        for i, box in enumerate(boxes):
             start_point = (int(box['xmin']), int(box['ymin']))
             end_point = (int(box['xmax']), int(box['ymax']))
             color = (255, 0, 0)
@@ -94,5 +149,3 @@ class GlueDetect:
             image = cv2.rectangle(image, start_point, end_point, color, thickness)
         
         cv2.imshow('Frame',image)
-
-        # cv2.imwrite('output.jpg', image)
