@@ -93,8 +93,8 @@ class GlueDetect:
             length = len(bbox_centers)
             i = 0
             y_thresh = x_thresh / 4
-            if x_thresh > 450:
-                y_thresh = x_thresh / 5
+            # if x_thresh > 450:
+            #     y_thresh = x_thresh / 5
             while i < length - 1:
                 if bbox_centers[i][1] - bbox_centers[i + 1][1] <= y_thresh:
                     count[RIGHT_SEQ[row][0]] = 1
@@ -104,7 +104,7 @@ class GlueDetect:
                     count[RIGHT_SEQ[row][left_or_right[i]]] = 1
                     i += 1
                 row += 1
-            if bbox_centers[length - 2][1] - bbox_centers[length - 1][1] > y_thresh:
+            if row < 5 and bbox_centers[length - 2][1] - bbox_centers[length - 1][1] > y_thresh:
                 count[RIGHT_SEQ[row][left_or_right[length - 1]]] = 1
         else:
             bboxes.sort(key=get_ymin)
@@ -113,9 +113,9 @@ class GlueDetect:
             left_or_right, x_thresh = self.x_split(bbox_centers)
             length = len(bbox_centers)
             i = 0
-            y_thresh = x_thresh / 4
-            if x_thresh > 450:
-                y_thresh = x_thresh / 5
+            y_thresh = x_thresh / 3
+            # if x_thresh > 450:
+            #     y_thresh = x_thresh / 5
             while i < length - 1:
                 if bbox_centers[i + 1][1] - bbox_centers[i][1] <= y_thresh:
                     count[LEFT_SEQ[row][0]] = 1
@@ -125,7 +125,7 @@ class GlueDetect:
                     count[LEFT_SEQ[row][left_or_right[i]]] = 1
                     i += 1
                 row += 1
-            if bbox_centers[length - 1][1] - bbox_centers[length - 2][1] > y_thresh:
+            if row < 5 and bbox_centers[length - 1][1] - bbox_centers[length - 2][1] > y_thresh:
                 count[LEFT_SEQ[row][left_or_right[length - 1]]] = 1
         return count
 
