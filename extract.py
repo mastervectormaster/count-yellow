@@ -14,7 +14,7 @@ for v in lst_videos:
     while True:
         ret, frame = vid.read()
         if ret:
-            if i == 10:
+            if i == 2:
                 save_path = "label_img/{}_{}.jpg".format(basename, save_idx)
                 print("     Save ", save_path)
                 cv2.imwrite(save_path, frame)

@@ -1,12 +1,19 @@
 import cv2
 import glob
 import os
+
+from matplotlib.pyplot import box
 from glue_detect import GlueDetect
+from functools import reduce
+
 lst_videos = glob.glob("videos/*.mp4")
 
 i = 0
 MODEL_PATH = 'models/best.pt'
 qrdetect = GlueDetect(MODEL_PATH)
+
+def get_ymin(box):
+    return box['ymin']
 
 for v in lst_videos:
     vid = cv2.VideoCapture(v)
@@ -15,10 +22,19 @@ for v in lst_videos:
     while True:
         ret, frame = vid.read()
         if ret:
-            box = qrdetect.detect_from_cv_mat(frame, 0.7, True)
-            if box == None:
+            boxes = qrdetect.detect_from_cv_mat(frame, 0.6)
+            if boxes != None and len(boxes) > 4:
+                boxes.sort(key=get_ymin)
+                boxes_ymins = map(lambda box: box['ymin'], boxes)
+
+                pos_str = reduce(lambda x, y: str(x) + " , " + str(y), boxes_ymins)
+                print(pos_str)
+                cv2.putText(frame, pos_str, (10, 500), cv2.FONT_HERSHEY_SIMPLEX, color=(255,0,0), thickness=3, fontScale=1)
+                qrdetect.draw_box(frame, boxes)
+                cv2.waitKey(1000)
+            else:
                 cv2.imshow('Frame', frame)
-            if cv2.waitKey(25) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         else:
             save_idx = 0

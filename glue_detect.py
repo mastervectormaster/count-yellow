@@ -37,7 +37,7 @@ class GlueDetect:
         detect_results = self.model(image_path)
         sorted_by_confidence_results = detect_results.pandas().xyxy[0].sort_values(by=['confidence'], ascending=False)
         if len(sorted_by_confidence_results) == 0:
-            print("No QR Code detected")
+            # print("No QR Code detected")
             return None
         most_confident_box = sorted_by_confidence_results.iloc[0]
         if need_draw:
@@ -60,7 +60,7 @@ class GlueDetect:
         sorted_by_confidence_results = detect_results.pandas().xyxy[0].sort_values(by=['confidence'], ascending=False)
         boxes = []
         if len(sorted_by_confidence_results) == 0:
-            print("No QR Code detected")
+            # print("No QR Code detected")
             return None
         else:
             boxes = [sorted_by_confidence_results.iloc[0]]         # always use one with the highest confidence
